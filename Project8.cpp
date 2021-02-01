@@ -9,14 +9,14 @@ std::atomic<uint32_t> g_counter = 0;
 std::mutex mutex;
 
 void LogPasswordsChecked(const std::string& pathOfCheckedPasswords, std::vector<std::string>& vectorPasswordsGenerated,
-    uint32_t generatedPasswords)
+    uint32_t generatedPasswords, std::vector<std::string>::iterator iterForBeginThread, std::vector<std::string>::iterator iterForEndThread)
 {
     std::cout << "Writing passwords into file..." << std::endl;
 
     std::ofstream fileStream;
     fileStream.open(pathOfCheckedPasswords, std::ios::app);
 
-    for (auto i = vectorPasswordsGenerated.begin(); i != vectorPasswordsGenerated.end(); ++i) {
+    for (auto i = iterForBeginThread; i != iterForEndThread; ++i) {
         std::unique_lock<std::mutex> guard(mutex);
 
         if (g_counter == generatedPasswords - 1) {
@@ -26,6 +26,7 @@ void LogPasswordsChecked(const std::string& pathOfCheckedPasswords, std::vector<
         fileStream << vectorPasswordsGenerated[g_counter] + '\n';
         ++g_counter;
     }
+
     std::cout << "Done!" << std::endl;
 }
 
@@ -65,10 +66,29 @@ void CheckPassword(const std::string& pathOfPasswords1, const std::string& pathO
     }
     std::cout << "Done!" << std::endl;
 
-    std::thread thread1(LogPasswordsChecked, std::ref(pathOfPasswords1), std::ref(vectorPasswordsGenerated), generatedPasswords);
-    std::thread thread2(LogPasswordsChecked, std::ref(pathOfPasswords2), std::ref(vectorPasswordsGenerated), generatedPasswords);
-    std::thread thread3(LogPasswordsChecked, std::ref(pathOfPasswords3), std::ref(vectorPasswordsGenerated), generatedPasswords);
-    std::thread thread4(LogPasswordsChecked, std::ref(pathOfPasswords4), std::ref(vectorPasswordsGenerated), generatedPasswords);
+    std::vector<std::string>::iterator iterForBeginThread1 = vectorPasswordsGenerated.begin();
+    std::vector<std::string>::iterator iterForEndThread1 = vectorPasswordsGenerated.begin()
+        + generatedPasswords / 4 - 1;
+    std::vector<std::string>::iterator iterForBeginThread2 = vectorPasswordsGenerated.begin()
+        + generatedPasswords / 4 - 1;
+    std::vector<std::string>::iterator iterForEndThread2 = vectorPasswordsGenerated.begin()
+        + 2 * generatedPasswords / 4 - 1;
+    std::vector<std::string>::iterator iterForBeginThread3 = vectorPasswordsGenerated.begin()
+        + 2 * generatedPasswords / 4 - 1;
+    std::vector<std::string>::iterator iterForEndThread3 = vectorPasswordsGenerated.begin() 
+        + 3 * generatedPasswords / 4 - 1;
+    std::vector<std::string>::iterator iterForBeginThread4 = vectorPasswordsGenerated.begin()
+        + 3 * generatedPasswords / 4 - 1;
+    std::vector<std::string>::iterator iterForEndThread4 = vectorPasswordsGenerated.end();
+
+    std::thread thread1(LogPasswordsChecked, std::ref(pathOfPasswords1), std::ref(vectorPasswordsGenerated), 
+        generatedPasswords, iterForBeginThread1, iterForEndThread1);
+    std::thread thread2(LogPasswordsChecked, std::ref(pathOfPasswords2), std::ref(vectorPasswordsGenerated), 
+        generatedPasswords, iterForBeginThread2, iterForEndThread2);
+    std::thread thread3(LogPasswordsChecked, std::ref(pathOfPasswords3), std::ref(vectorPasswordsGenerated), 
+        generatedPasswords, iterForBeginThread3, iterForEndThread3);
+    std::thread thread4(LogPasswordsChecked, std::ref(pathOfPasswords4), std::ref(vectorPasswordsGenerated),
+        generatedPasswords, iterForBeginThread4, iterForEndThread4);
 
     thread1.join();
     thread2.join();
